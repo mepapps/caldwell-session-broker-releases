@@ -168,10 +168,18 @@ Info "Identity  : $($health.session_user)  elevated=$($health.elevated)  $($heal
 Info "Auth      : $($health.auth_mode)"
 Info "Endpoint  : http://$($env:COMPUTERNAME):$Port"
 
-if ($health.elevated -ne $true) {
+# Distinguish "definitely not elevated" from "could not tell". /health now
+# awaits its probes, so null should not happen - but a wedged probe times out
+# and reports null, and warning "not elevated" about a broker that IS High
+# integrity is worse than admitting we could not determine it.
+if ($health.elevated -eq $false) {
     Write-Host ""
     Bad "WARNING: not elevated - admin operations will fail."
     Info "The task must use RunLevel Highest. Re-run this installer from an elevated prompt."
+} elseif ($null -eq $health.elevated) {
+    Write-Host ""
+    Info "NOTE: could not determine elevation (probe did not report in time)."
+    Info "      Check with: .\broker.ps1 status"
 }
 
 Write-Host ""
