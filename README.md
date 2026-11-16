@@ -111,6 +111,31 @@ node broker.mjs run "hostname"
 | **Self-served CLI** | `GET /client`, zero dependencies, never contains a token |
 | **Self-describing API** | `GET /help` — enough for a cold agent to use every endpoint |
 
+## A machine you can't reach
+
+For a machine on someone else's network — behind NAT, no port forward, nothing
+you want to install — have someone there run this in a terminal:
+
+```powershell
+irm https://raw.githubusercontent.com/mepapps/caldwell-session-broker-releases/main/connect.ps1 | iex
+```
+```bash
+curl -fsSL https://raw.githubusercontent.com/mepapps/caldwell-session-broker-releases/main/connect.sh | bash
+```
+
+Nothing is installed: it downloads a single executable to a temp folder, shows
+a 5-character **PIN**, and lasts until the window is closed. Then, from your
+machine:
+
+```bash
+broker pair 7Z5KD
+broker --pin 7Z5KD run "hostname"
+```
+
+It dials out to a relay, so the remote network needs no inbound access, and it
+listens only on loopback, so there's no firewall prompt. Token auth is on from
+the start; the PIN only finds the machine.
+
 ## Network scope
 
 The broker binds loopback, RFC1918 LAN, and CGNAT/Tailscale addresses. **A public address is refused at startup** — it is not designed to face the internet.

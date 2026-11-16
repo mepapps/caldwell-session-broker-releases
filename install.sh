@@ -92,7 +92,9 @@ fi
 read -r TAG URL ASSET < <(node -e '
     let d=""; process.stdin.on("data",c=>d+=c).on("end",()=>{
       const r=JSON.parse(d);
-      const a=(r.assets||[]).find(x=>/linux-x64\.tar\.gz$/.test(x.name));
+      // The broker, not the connect tool: both end in linux-x64.tar.gz, and only
+      // the broker has a version number straight after the prefix.
+      const a=(r.assets||[]).find(x=>/^caldwell-session-broker-\d.*-linux-x64\.tar\.gz$/.test(x.name));
       if(!a){console.error("NO_ASSET");process.exit(1)}
       console.log(r.tag_name, a.browser_download_url, a.name);
     })' <<< "$RELEASE_JSON") || die "no linux-x64 asset in this release. See https://github.com/${REPO}/releases"

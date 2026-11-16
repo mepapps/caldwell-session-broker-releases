@@ -96,7 +96,9 @@ try {
     return
 }
 
-$asset = $release.assets | Where-Object { $_.name -like '*win-x64.zip' } | Select-Object -First 1
+# The broker's asset, not the connect tool's: both end in win-x64.zip, and only
+# the broker has a version number straight after the prefix.
+$asset = $release.assets | Where-Object { $_.name -match '^caldwell-session-broker-\d.*-win-x64\.zip$' } | Select-Object -First 1
 if (-not $asset) { Bad "No win-x64 asset in $($release.tag_name)."; return }
 
 Good "Found $($release.tag_name)"
