@@ -130,10 +130,46 @@ if ($owner) {
 # --- extract in place --------------------------------------------------------
 # config.json, token.txt and logs\ are not in the archive, so extracting over an
 # existing install leaves local state untouched.
+#
+# Not Expand-Archive. Windows PowerShell 5.1 started from a PowerShell 7 process
+# - which is how an agent runs this, through the broker - inherits PS7's
+# PSModulePath, loads PS7's Archive module, and Expand-Archive then fails on a
+# .NET overload 5.1 does not have. That failed update used to carry on, restart
+# the untouched old version, and report success. ZipFile is plain .NET, present
+# in both, and needs no module; robocopy merges over the existing install.
+function Restart-Previous {
+    Enable-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue | Out-Null
+    Start-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+}
+
 New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 Info "Extracting to $InstallDir..."
-Expand-Archive -Path $zip -DestinationPath $InstallDir -Force
-Remove-Item $zip -Force -ErrorAction SilentlyContinue
+$stage = "$tmp-extract"
+Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+try {
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    [System.IO.Compression.ZipFile]::ExtractToDirectory($zip, $stage)
+    robocopy $stage $InstallDir /E /R:2 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
+    # robocopy: 0-7 are success variants, 8 and above mean files were not copied.
+    if ($LASTEXITCODE -ge 8) { throw "robocopy exit code $LASTEXITCODE" }
+} catch {
+    Bad "Extraction failed: $_"
+    Info "Restarting the broker that was running before."
+    Restart-Previous
+    return
+} finally {
+    Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+    Remove-Item $zip -Force -ErrorAction SilentlyContinue
+}
+
+# What is on disk must be what was downloaded before anything is registered.
+$want = $release.tag_name -replace '^v'
+$onDisk = (Get-Content (Join-Path $InstallDir 'VERSION.json') -Raw | ConvertFrom-Json).version
+if ($onDisk -ne $want) {
+    Bad "Files on disk report $onDisk after extracting $want. Not continuing."
+    Restart-Previous
+    return
+}
 
 # --- register and start ------------------------------------------------------
 Info "Registering scheduled task..."
@@ -161,8 +197,16 @@ if (-not $health) {
     return
 }
 
+# Report what is actually running, not what was downloaded. Printing the
+# release tag here is how a failed update once announced itself as a success.
+if ($health.version -ne $want) {
+    Bad "The broker is up, but it is running $($health.version), not $want."
+    Info "The update did not take effect. Check $InstallDir\broker\logs\broker.out.log"
+    return
+}
+
 Write-Host "  ============================================================" -ForegroundColor Green
-Good " INSTALLED - $($release.tag_name)"
+Good " INSTALLED - v$($health.version)"
 Write-Host "  ============================================================" -ForegroundColor Green
 Write-Host ""
 Info "Location  : $InstallDir"
