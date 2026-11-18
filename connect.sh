@@ -5,8 +5,8 @@
 #   curl -fsSL https://raw.githubusercontent.com/mepapps/caldwell-session-broker-releases/main/connect.sh | bash
 #
 # Nothing is installed: the connect tool downloads to a temp folder, runs in
-# this terminal, and is removed when it ends. Press Ctrl+C or close the
-# terminal to end the session.
+# this terminal, and is removed when it ends. Close the terminal to end the
+# session, or press Ctrl+C twice - once only warns.
 #
 # SESSION_BROKER_CONNECT_ASSET=<url or .tar.gz>  use a specific download
 
