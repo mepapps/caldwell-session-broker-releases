@@ -136,6 +136,12 @@ It dials out to a relay, so the remote network needs no inbound access, and it
 listens only on loopback, so there's no firewall prompt. Token auth is on from
 the start; the PIN only finds the machine.
 
+**On Windows there's also Caldwell Connect:** download
+`caldwell-connect-<version>-win-x64.exe` from the release and double-click it.
+It's one native file - nothing installed, nothing unpacked - with the same PIN
+and the same `broker pair`. This first version runs commands; terminals and MCP
+come next.
+
 ## Network scope
 
 The broker binds loopback, RFC1918 LAN, and CGNAT/Tailscale addresses. **A public address is refused at startup** — it is not designed to face the internet.
